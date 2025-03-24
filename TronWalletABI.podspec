@@ -8,15 +8,14 @@
 
 Pod::Spec.new do |s|
   s.name             = 'TronWalletABI'
-  s.version          = '1.0.0'
+  s.version          = '1.0.1'
   s.summary          = 'Core Tron data structures and algorithms.'
 
   s.homepage         = 'https://github.com/TronLink/TronWalletABI'
   s.license          = { :type => 'MIT', :file => 'LICENSE' }
   s.author           = 'tronlinkdev'
   s.source           = { :git => 'https://github.com/TronLink/TronWalletABI.git', :tag => s.version.to_s }
-  s.platform = :ios, '10.0'
-  s.ios.deployment_target = '10.0'
+  s.platform = :ios, '13.0'
 
   s.source_files = 'TronWalletABI/Classes/**/*'
   s.module_name = 'TronCore'
