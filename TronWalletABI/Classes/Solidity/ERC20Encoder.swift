@@ -260,4 +260,14 @@ public final class ERC20Encoder {
         try! encoder.encode(function: function, arguments: [path, poolVersion, versionLen, fees, tuple])
         return encoder.data
     }
+
+    /// Encodes a function call to `ownerOf`
+    ///
+    /// Solidity function: `function ownerOf(uint256) public returns (address);`
+    public static func encodeOwnerOf(tokenId: BigUInt) -> Data {
+        let function = Function(name: "ownerOf", parameters: [.uint(bits: 256)])
+        let encoder = ABIEncoder()
+        try! encoder.encode(function: function, arguments: [tokenId])
+        return encoder.data
+    }
 }
