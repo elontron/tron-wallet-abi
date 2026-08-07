@@ -14,6 +14,10 @@ To run the example project, clone the repo, and run `pod install` from the Examp
 
 - iOS 13.0+
 
+## Migration Note
+
+As of version 1.0.3, the TrezorCrypto dependency has been migrated from a CocoaPods dependency to source code included directly in the project. This change was made to improve maintainability and reduce external dependencies.
+
 ## Installation
 
 TronWalletABI is available through [CocoaPods](https://cocoapods.org). To install

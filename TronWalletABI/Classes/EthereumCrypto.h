@@ -1,6 +1,5 @@
 
 @import Foundation;
-@import TrezorCrypto;
 
 @interface EthereumCrypto : NSObject
 

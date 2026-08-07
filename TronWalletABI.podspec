@@ -20,9 +20,8 @@ Pod::Spec.new do |s|
   s.source_files = 'TronWalletABI/Classes/**/*'
   s.module_name = 'TronCore'
   s.dependency 'BigInt'
-  s.dependency 'TrezorCrypto', '~> 0.0.8'
   s.dependency 'SwiftProtobuf', '~> 1.0'
 
-  s.pod_target_xcconfig = { 'SWIFT_OPTIMIZATION_LEVEL' => '-Owholemodule' }
+  s.pod_target_xcconfig = { 'SWIFT_OPTIMIZATION_LEVEL' => '-Owholemodule', 'OTHER_CFLAGS' => '$(inherited) -DRAND_PLATFORM_INDEPENDENT' }
   s.public_header_files = 'TronWalletABI/Classes/*.h'
 end

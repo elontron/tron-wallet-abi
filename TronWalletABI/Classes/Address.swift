@@ -1,6 +1,5 @@
 
 import Foundation
-import TrezorCrypto
 
 /// Ethereum address.
 public struct Address: Hashable, CustomStringConvertible {
