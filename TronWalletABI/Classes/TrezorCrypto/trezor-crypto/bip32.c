@@ -151,7 +151,7 @@ int hdnode_from_xprv(uint32_t depth, uint32_t child_num, const uint8_t *chain_co
 
 int hdnode_from_seed(const uint8_t *seed, int seed_len, const char* curve, HDNode *out)
 {
-	static CONFIDENTIAL uint8_t I[32 + 32];
+	CONFIDENTIAL uint8_t I[32 + 32];
 	memset(out, 0, sizeof(HDNode));
 	out->depth = 0;
 	out->child_num = 0;
@@ -159,7 +159,7 @@ int hdnode_from_seed(const uint8_t *seed, int seed_len, const char* curve, HDNod
 	if (out->curve == 0) {
 		return 0;
 	}
-	static CONFIDENTIAL HMAC_SHA512_CTX ctx;
+	CONFIDENTIAL HMAC_SHA512_CTX ctx;
 	hmac_sha512_Init(&ctx, (const uint8_t*) out->curve->bip32_name, strlen(out->curve->bip32_name));
 	hmac_sha512_Update(&ctx, seed, seed_len);
 	hmac_sha512_Final(&ctx, I);
@@ -199,9 +199,9 @@ uint32_t hdnode_fingerprint(HDNode *node)
 
 int hdnode_private_ckd(HDNode *inout, uint32_t i)
 {
-	static CONFIDENTIAL uint8_t data[1 + 32 + 4];
-	static CONFIDENTIAL uint8_t I[32 + 32];
-	static CONFIDENTIAL bignum256 a, b;
+	CONFIDENTIAL uint8_t data[1 + 32 + 4];
+	CONFIDENTIAL uint8_t I[32 + 32];
+	CONFIDENTIAL bignum256 a, b;
 
 	if (i & 0x80000000) { // private derivation
 		data[0] = 0;
@@ -217,7 +217,7 @@ int hdnode_private_ckd(HDNode *inout, uint32_t i)
 
 	bn_read_be(inout->private_key, &a);
 
-	static CONFIDENTIAL HMAC_SHA512_CTX ctx;
+	CONFIDENTIAL HMAC_SHA512_CTX ctx;
 	hmac_sha512_Init(&ctx, inout->chain_code, 32);
 	hmac_sha512_Update(&ctx, data, sizeof(data));
 	hmac_sha512_Final(&ctx, I);
@@ -293,10 +293,10 @@ int hdnode_private_ckd_cardano(HDNode *inout, uint32_t index)
 		keysize = 64;
 	}
 
-	static CONFIDENTIAL uint8_t data[1 + 64 + 4];
-	static CONFIDENTIAL uint8_t z[32 + 32];
-	static CONFIDENTIAL uint8_t priv_key[64];
-	static CONFIDENTIAL uint8_t res_key[64];
+	CONFIDENTIAL uint8_t data[1 + 64 + 4];
+	CONFIDENTIAL uint8_t z[32 + 32];
+	CONFIDENTIAL uint8_t priv_key[64];
+	CONFIDENTIAL uint8_t res_key[64];
 
 	write_le(data + keysize + 1, index);
 
@@ -313,12 +313,12 @@ int hdnode_private_ckd_cardano(HDNode *inout, uint32_t index)
 		memcpy(data + 1, inout->public_key + 1, 32);
 	}
 
-	static CONFIDENTIAL HMAC_SHA512_CTX ctx;
+	CONFIDENTIAL HMAC_SHA512_CTX ctx;
 	hmac_sha512_Init(&ctx, inout->chain_code, 32);
 	hmac_sha512_Update(&ctx, data, 1 + keysize + 4);
 	hmac_sha512_Final(&ctx, z);
 
-	static CONFIDENTIAL uint8_t zl8[32];
+	CONFIDENTIAL uint8_t zl8[32];
 	memset(zl8, 0, 32);
 
 	/* get 8 * Zl */
@@ -348,6 +348,7 @@ int hdnode_private_ckd_cardano(HDNode *inout, uint32_t index)
 
 	// making sure to wipe our memory
 	memzero(z, sizeof(z));
+	memzero(zl8, sizeof(zl8));
 	memzero(data, sizeof(data));
 	memzero(priv_key, sizeof(priv_key));
 	memzero(res_key, sizeof(res_key));
@@ -355,7 +356,7 @@ int hdnode_private_ckd_cardano(HDNode *inout, uint32_t index)
 }
 
 int hdnode_from_seed_cardano(const uint8_t *pass, int pass_len, const uint8_t *seed, int seed_len, HDNode *out) {
-	static CONFIDENTIAL uint8_t secret[96];
+	CONFIDENTIAL uint8_t secret[96];
 	pbkdf2_hmac_sha512(pass, pass_len, seed, seed_len, 4096, secret, 96);
 	
 	secret[0] &= 248;
@@ -459,69 +460,19 @@ void hdnode_public_ckd_address_optimized(const curve_point *pub, const uint8_t *
 	}
 }
 
-#if USE_BIP32_CACHE
-static bool private_ckd_cache_root_set = false;
-static CONFIDENTIAL HDNode private_ckd_cache_root;
-static int private_ckd_cache_index = 0;
-
-static CONFIDENTIAL struct {
-	bool set;
-	size_t depth;
-	uint32_t i[BIP32_CACHE_MAXDEPTH];
-	HDNode node;
-} private_ckd_cache[BIP32_CACHE_SIZE];
-
+// The parent nodes used to be memoized in a file-scope array of HDNodes. That cache
+// was shared mutable state holding plaintext private keys, so the chain is always
+// recomputed instead. Kept under the original name for source compatibility.
 int hdnode_private_ckd_cached(HDNode *inout, const uint32_t *i, size_t i_count, uint32_t *fingerprint)
 {
 	if (i_count == 0) {
 		// no way how to compute parent fingerprint
 		return 1;
 	}
-	if (i_count == 1) {
-		if (fingerprint) {
-			*fingerprint = hdnode_fingerprint(inout);
-		}
-		if (hdnode_private_ckd(inout, i[0]) == 0) return 0;
-		return 1;
-	}
 
-	bool found = false;
-	// if root is not set or not the same
-	if (!private_ckd_cache_root_set || memcmp(&private_ckd_cache_root, inout, sizeof(HDNode)) != 0) {
-		// clear the cache
-		private_ckd_cache_index = 0;
-		memzero(private_ckd_cache, sizeof(private_ckd_cache));
-		// setup new root
-		memcpy(&private_ckd_cache_root, inout, sizeof(HDNode));
-		private_ckd_cache_root_set = true;
-	} else {
-		// try to find parent
-		int j;
-		for (j = 0; j < BIP32_CACHE_SIZE; j++) {
-			if (private_ckd_cache[j].set &&
-				private_ckd_cache[j].depth == i_count - 1 &&
-				memcmp(private_ckd_cache[j].i, i, (i_count - 1) * sizeof(uint32_t)) == 0 &&
-				private_ckd_cache[j].node.curve == inout->curve) {
-				memcpy(inout, &(private_ckd_cache[j].node), sizeof(HDNode));
-				found = true;
-				break;
-			}
-		}
-	}
-
-	// else derive parent
-	if (!found) {
-		size_t k;
-		for (k = 0; k < i_count - 1; k++) {
-			if (hdnode_private_ckd(inout, i[k]) == 0) return 0;
-		}
-		// and save it
-		memset(&(private_ckd_cache[private_ckd_cache_index]), 0, sizeof(private_ckd_cache[private_ckd_cache_index]));
-		private_ckd_cache[private_ckd_cache_index].set = true;
-		private_ckd_cache[private_ckd_cache_index].depth = i_count - 1;
-		memcpy(private_ckd_cache[private_ckd_cache_index].i, i, (i_count - 1) * sizeof(uint32_t));
-		memcpy(&(private_ckd_cache[private_ckd_cache_index].node), inout, sizeof(HDNode));
-		private_ckd_cache_index = (private_ckd_cache_index + 1) % BIP32_CACHE_SIZE;
+	// derive the parent chain, leaving the last index for after the fingerprint
+	for (size_t k = 0; k + 1 < i_count; k++) {
+		if (hdnode_private_ckd(inout, i[k]) == 0) return 0;
 	}
 
 	if (fingerprint) {
@@ -531,7 +482,6 @@ int hdnode_private_ckd_cached(HDNode *inout, const uint32_t *i, size_t i_count, 
 
 	return 1;
 }
-#endif
 
 void hdnode_get_address_raw(HDNode *node, uint32_t version, uint8_t *addr_raw)
 {

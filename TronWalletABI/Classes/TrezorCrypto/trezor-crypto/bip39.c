@@ -45,14 +45,14 @@ const char *mnemonic_generate(int strength, char *buf, int buflen)
 	return r;
 }
 
-const uint16_t *mnemonic_generate_indexes(int strength)
+const uint16_t *mnemonic_generate_indexes(int strength, uint16_t *indexes, int count)
 {
 	if (strength % 32 || strength < 128 || strength > 256) {
 		return 0;
 	}
 	uint8_t data[32];
 	random_buffer(data, 32);
-	const uint16_t *r = mnemonic_from_data_indexes(data, strength / 8);
+	const uint16_t *r = mnemonic_from_data_indexes(data, strength / 8, indexes, count);
 	memzero(data, sizeof(data));
 	return r;
 }
@@ -94,9 +94,12 @@ const char *mnemonic_from_data(const uint8_t *data, int len, char *buf, int bufl
 	return buf;
 }
 
-const uint16_t *mnemonic_from_data_indexes(const uint8_t *data, int len)
+const uint16_t *mnemonic_from_data_indexes(const uint8_t *data, int len, uint16_t *indexes, int count)
 {
 	if (len % 4 || len < 16 || len > 32) {
+		return 0;
+	}
+	if (!indexes || count < BIP39_MAX_WORDS) {
 		return 0;
 	}
 
@@ -109,7 +112,6 @@ const uint16_t *mnemonic_from_data_indexes(const uint8_t *data, int len)
 	memcpy(bits, data, len);
 
 	int mlen = len * 3 / 4;
-	static CONFIDENTIAL uint16_t mnemo[24];
 
 	int i, j, idx;
 	for (i = 0; i < mlen; i++) {
@@ -118,11 +120,11 @@ const uint16_t *mnemonic_from_data_indexes(const uint8_t *data, int len)
 			idx <<= 1;
 			idx += (bits[(i * 11 + j) / 8] & (1 << (7 - ((i * 11 + j) % 8)))) > 0;
 		}
-		mnemo[i] = idx;
+		indexes[i] = idx;
 	}
 	memzero(bits, sizeof(bits));
 
-	return mnemo;
+	return indexes;
 }
 
 int mnemonic_to_entropy(const char *mnemonic, uint8_t *entropy)
