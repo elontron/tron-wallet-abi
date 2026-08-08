@@ -23,32 +23,11 @@
 
 #include "rand.h"
 
-#ifndef RAND_PLATFORM_INDEPENDENT
-
-
-#pragma message("NOT SUITABLE FOR PRODUCTION USE!")
-
-// The following code is not supposed to be used in a production environment.
-// It's included only to make the library testable.
-// The message above tries to prevent any accidental use outside of the test environment.
-//
-// You are supposed to replace the random32() function with your own secure code.
-// There is also a possibility to replace the random_buffer() function as it is defined as a weak symbol.
-
-#include <stdio.h>
-#include <time.h>
-
-uint32_t random32(void)
-{
-	static int initialized = 0;
-	if (!initialized) {
-		srand((unsigned)time(NULL));
-		initialized = 1;
-	}
-	return ((rand() & 0xFF) | ((rand() & 0xFF) << 8) | ((rand() & 0xFF) << 16) | ((uint32_t) (rand() & 0xFF) << 24));
-}
-
-#endif /* RAND_PLATFORM_INDEPENDENT */
+// random32() is deliberately left undefined here. Upstream shipped an
+// srand(time(NULL))/rand() fallback guarded by RAND_PLATFORM_INDEPENDENT, which
+// silently produced brute-forceable entropy whenever that macro went missing --
+// and it feeds mnemonic_generate(). util/SecRandom.m is the only implementation;
+// without it the link fails instead of the wallet degrading unnoticed.
 
 //
 // The following code is platform independent
