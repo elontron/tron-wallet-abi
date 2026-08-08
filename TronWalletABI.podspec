@@ -18,6 +18,8 @@ Pod::Spec.new do |s|
   s.platform = :ios, '13.0'
 
   s.source_files = 'TronWalletABI/Classes/**/*.{h,m,c,swift}'
+  # secp256k1.c / nist256p1.c #include these precomputed tables.
+  s.preserve_paths = 'TronWalletABI/Classes/TrezorCrypto/trezor-crypto/*.table'
   s.module_name = 'TronCore'
   s.dependency 'BigInt'
   s.dependency 'SwiftProtobuf', '~> 1.0'
