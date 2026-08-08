@@ -19,7 +19,7 @@
 
 /// Verifies a hash signature.
 ///
-/// @param signature 65-byte signature to verify
+/// @param signature 64-byte [R || S] or 65-byte [R || S || V] signature; the recovery byte is ignored
 /// @param message 32-byte digest to verify
 /// @param publicKey 33-byte compressed or 65-byte uncompressed public key
 /// @return whether the inputs and signature are valid

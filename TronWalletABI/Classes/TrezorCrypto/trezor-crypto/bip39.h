@@ -29,6 +29,9 @@
 #define BIP39_PBKDF2_ROUNDS 2048
 #define BIP39_MAX_WORDS 24
 #define BIP39_MAX_WORD_LENGTH 9
+// Bounded by the PBKDF2 salt buffer, not by BIP39 itself. Enforce the same limit on any
+// passphrase input field so users are told up front rather than failing at derivation.
+#define BIP39_MAX_PASSPHRASE_LENGTH 256
 
 // buf/indexes are caller-owned; count is the number of uint16_t entries and must be
 // at least BIP39_MAX_WORDS.
@@ -42,8 +45,10 @@ int mnemonic_check(const char *mnemonic);
 
 int mnemonic_to_entropy(const char *mnemonic, uint8_t *entropy);
 
-// passphrase must be at most 256 characters or code may crash
-void mnemonic_to_seed(const char *mnemonic, const char *passphrase, uint8_t seed[512 / 8], void (*progress_callback)(uint32_t current, uint32_t total));
+// Returns 1 on success. Returns 0 and leaves seed zeroed when either string is NULL or the
+// passphrase exceeds BIP39_MAX_PASSPHRASE_LENGTH, so the result must be checked before use:
+// an unchecked failure would derive every wallet from an all-zero seed.
+int mnemonic_to_seed(const char *mnemonic, const char *passphrase, uint8_t seed[512 / 8], void (*progress_callback)(uint32_t current, uint32_t total)) __attribute__((warn_unused_result));
 
 const char * const *mnemonic_wordlist(void);
 

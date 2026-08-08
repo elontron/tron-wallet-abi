@@ -55,7 +55,8 @@ static BOOL isValidPublicKeyData(NSData *publicKey) {
 }
 
 + (BOOL)verifySignature:(nonnull NSData *)signature message:(nonnull NSData *)message publicKey:(nonnull NSData *)publicKey {
-    if (signature.length != 65 || message.length != 32 || !isValidPublicKeyData(publicKey)) {
+    // ecdsa_verify_digest reads R || S only; a trailing recovery byte is accepted but unused.
+    if ((signature.length != 64 && signature.length != 65) || message.length != 32 || !isValidPublicKeyData(publicKey)) {
         return NO;
     }
     return ecdsa_verify_digest(&secp256k1, publicKey.bytes, signature.bytes, message.bytes) == 0;

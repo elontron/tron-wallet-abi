@@ -33,10 +33,11 @@ class Tests: XCTestCase {
         XCTAssertTrue(EthereumCrypto.getPublicKey(from: Data(count: 31)).isEmpty)
         XCTAssertTrue(EthereumCrypto.sign(hash: Data(count: 31), privateKey: privateKey).isEmpty)
         XCTAssertTrue(EthereumCrypto.sign(hash: digest, privateKey: Data(count: 31)).isEmpty)
-        XCTAssertFalse(EthereumCrypto.verify(signature: Data(count: 64), message: digest, publicKey: Data(count: 65)))
+        XCTAssertFalse(EthereumCrypto.verify(signature: Data(count: 63), message: digest, publicKey: Data(count: 65)))
         XCTAssertFalse(EthereumCrypto.verify(signature: Data(count: 65), message: Data(count: 31), publicKey: Data(count: 65)))
         XCTAssertFalse(EthereumCrypto.verify(signature: Data(count: 65), message: digest, publicKey: Data(count: 64)))
-        XCTAssertFalse(EthereumCrypto.verify(signature: Data(count: 65), message: digest, publicKey: Data(count: 65)))
+        // Well-formed 0x04 prefix, so this one reaches ecdsa_validate_pubkey and fails there.
+        XCTAssertFalse(EthereumCrypto.verify(signature: Data(count: 65), message: digest, publicKey: Data([0x04]) + Data(count: 64)))
 
         // Correct length, but outside 0 < k < order, where the curve code only has an assert().
         for outOfRange in [Data(count: 32), Tests.curveOrder, Data(repeating: 0xff, count: 32)] {
@@ -62,10 +63,18 @@ class Tests: XCTestCase {
         XCTAssertEqual(signature.count, 65)
         XCTAssertTrue(EthereumCrypto.verify(signature: signature, message: digest, publicKey: publicKey))
 
+        // The recovery byte is optional, so bare R || S has to verify as well.
+        XCTAssertTrue(EthereumCrypto.verify(signature: Data(signature.prefix(64)), message: digest, publicKey: publicKey))
+
         // Same key in compressed form, the other branch accepted by the public key check.
         var compressed = Data([0x02 | (publicKey[64] & 0x01)])
         compressed.append(publicKey[1..<33])
         XCTAssertTrue(EthereumCrypto.verify(signature: signature, message: digest, publicKey: compressed))
+
+        // Prefix and length must agree: 0x04 on a 33-byte buffer would make ecdsa_read_pubkey
+        // read pub_key[33..64], past the end. The mirror case is rejected for symmetry.
+        XCTAssertFalse(EthereumCrypto.verify(signature: signature, message: digest, publicKey: Data([0x04]) + publicKey[1..<33]))
+        XCTAssertFalse(EthereumCrypto.verify(signature: signature, message: digest, publicKey: Data([0x02]) + publicKey[1..<65]))
 
         var tampered = signature
         tampered[0] ^= 0x01

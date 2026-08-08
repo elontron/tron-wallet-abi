@@ -212,15 +212,21 @@ int mnemonic_check(const char *mnemonic)
 	return 0;
 }
 
-// passphrase must be at most 256 characters or code may crash
-void mnemonic_to_seed(const char *mnemonic, const char *passphrase, uint8_t seed[512 / 8], void (*progress_callback)(uint32_t current, uint32_t total))
+int mnemonic_to_seed(const char *mnemonic, const char *passphrase, uint8_t seed[512 / 8], void (*progress_callback)(uint32_t current, uint32_t total))
 {
-	int passphraselen = strlen(passphrase);
-	uint8_t salt[8 + 256];
+	memzero(seed, 512 / 8);
+	if (!mnemonic || !passphrase) {
+		return 0;
+	}
+	size_t passphraselen = strlen(passphrase);
+	if (passphraselen > BIP39_MAX_PASSPHRASE_LENGTH) {
+		return 0;
+	}
+	uint8_t salt[8 + BIP39_MAX_PASSPHRASE_LENGTH];
 	memcpy(salt, "mnemonic", 8);
 	memcpy(salt + 8, passphrase, passphraselen);
 	CONFIDENTIAL PBKDF2_HMAC_SHA512_CTX pctx;
-	pbkdf2_hmac_sha512_Init(&pctx, (const uint8_t *)mnemonic, strlen(mnemonic), salt, passphraselen + 8, 1);
+	pbkdf2_hmac_sha512_Init(&pctx, (const uint8_t *)mnemonic, strlen(mnemonic), salt, (int)passphraselen + 8, 1);
 	if (progress_callback) {
 		progress_callback(0, BIP39_PBKDF2_ROUNDS);
 	}
@@ -232,6 +238,7 @@ void mnemonic_to_seed(const char *mnemonic, const char *passphrase, uint8_t seed
 	}
 	pbkdf2_hmac_sha512_Final(&pctx, seed);
 	memzero(salt, sizeof(salt));
+	return 1;
 }
 
 const char * const *mnemonic_wordlist(void)
