@@ -33,14 +33,14 @@
 #include "options.h"
 #include "memzero.h"
 
-const char *mnemonic_generate(int strength)
+const char *mnemonic_generate(int strength, char *buf, int buflen)
 {
 	if (strength % 32 || strength < 128 || strength > 256) {
 		return 0;
 	}
 	uint8_t data[32];
 	random_buffer(data, 32);
-	const char *r = mnemonic_from_data(data, strength / 8);
+	const char *r = mnemonic_from_data(data, strength / 8, buf, buflen);
 	memzero(data, sizeof(data));
 	return r;
 }
@@ -57,9 +57,12 @@ const uint16_t *mnemonic_generate_indexes(int strength)
 	return r;
 }
 
-const char *mnemonic_from_data(const uint8_t *data, int len)
+const char *mnemonic_from_data(const uint8_t *data, int len, char *buf, int buflen)
 {
 	if (len % 4 || len < 16 || len > 32) {
+		return 0;
+	}
+	if (!buf || buflen < BIP39_MAX_WORDS * (BIP39_MAX_WORD_LENGTH + 1)) {
 		return 0;
 	}
 
@@ -72,10 +75,9 @@ const char *mnemonic_from_data(const uint8_t *data, int len)
 	memcpy(bits, data, len);
 
 	int mlen = len * 3 / 4;
-	static CONFIDENTIAL char mnemo[24 * 10];
 
 	int i, j, idx;
-	char *p = mnemo;
+	char *p = buf;
 	for (i = 0; i < mlen; i++) {
 		idx = 0;
 		for (j = 0; j < 11; j++) {
@@ -89,7 +91,7 @@ const char *mnemonic_from_data(const uint8_t *data, int len)
 	}
 	memzero(bits, sizeof(bits));
 
-	return mnemo;
+	return buf;
 }
 
 const uint16_t *mnemonic_from_data_indexes(const uint8_t *data, int len)
@@ -215,7 +217,7 @@ void mnemonic_to_seed(const char *mnemonic, const char *passphrase, uint8_t seed
 	uint8_t salt[8 + 256];
 	memcpy(salt, "mnemonic", 8);
 	memcpy(salt + 8, passphrase, passphraselen);
-	static CONFIDENTIAL PBKDF2_HMAC_SHA512_CTX pctx;
+	CONFIDENTIAL PBKDF2_HMAC_SHA512_CTX pctx;
 	pbkdf2_hmac_sha512_Init(&pctx, (const uint8_t *)mnemonic, strlen(mnemonic), salt, passphraselen + 8, 1);
 	if (progress_callback) {
 		progress_callback(0, BIP39_PBKDF2_ROUNDS);

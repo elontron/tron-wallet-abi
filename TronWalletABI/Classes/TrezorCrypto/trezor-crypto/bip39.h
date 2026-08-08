@@ -27,11 +27,13 @@
 #include <stdint.h>
 
 #define BIP39_PBKDF2_ROUNDS 2048
+#define BIP39_MAX_WORDS 24
+#define BIP39_MAX_WORD_LENGTH 9
 
-const char *mnemonic_generate(int strength);	// strength in bits
+const char *mnemonic_generate(int strength, char *buf, int buflen);	// strength in bits
 const uint16_t *mnemonic_generate_indexes(int strength);	// strength in bits
 
-const char *mnemonic_from_data(const uint8_t *data, int len);
+const char *mnemonic_from_data(const uint8_t *data, int len, char *buf, int buflen);
 const uint16_t *mnemonic_from_data_indexes(const uint8_t *data, int len);
 
 int mnemonic_check(const char *mnemonic);
