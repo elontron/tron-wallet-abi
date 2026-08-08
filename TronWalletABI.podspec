@@ -23,5 +23,8 @@ Pod::Spec.new do |s|
   s.dependency 'SwiftProtobuf', '~> 1.0'
 
   s.pod_target_xcconfig = { 'SWIFT_OPTIMIZATION_LEVEL' => '-Owholemodule' }
-  s.public_header_files = 'TronWalletABI/Classes/*.h'
+  s.public_header_files = [
+    'TronWalletABI/Classes/*.h',
+    'TronWalletABI/Classes/TrezorCrypto/TrezorCrypto.h'
+  ]
 end
