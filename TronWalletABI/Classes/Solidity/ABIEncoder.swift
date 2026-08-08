@@ -152,9 +152,17 @@ public final class ABIEncoder: Codable {
 
     /// Encodes an address
     public func encode(_ address: Address) throws {
-        let padding = ((address.data.count + 31) / 32) * 32 - address.data.count
+        // Strip TRON's network prefix only at the EVM ABI boundary.
+        let addressData: Data
+        if address.data.count == 21, address.data.first == 0x41 {
+            addressData = Data(address.data.dropFirst())
+        } else {
+            addressData = address.data
+        }
+
+        let padding = ((addressData.count + 31) / 32) * 32 - addressData.count
         data.append(Data(repeating: 0, count: padding))
-        data.append(address.data)
+        data.append(addressData)
     }
 
     /// Encodes a string
