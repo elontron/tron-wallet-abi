@@ -29,6 +29,9 @@
 
 uint32_t random32(void);
 void random_buffer(uint8_t *buf, size_t len);
+// Returns 1 on success. Requests of 16-32 bytes also reject uniform/fixed output
+// and candidates repeated within the last three accepted requests of that length.
+int random_buffer_checked(uint8_t *buf, size_t len);
 
 uint32_t random_uniform(uint32_t n);
 void random_permute(char *buf, size_t len);

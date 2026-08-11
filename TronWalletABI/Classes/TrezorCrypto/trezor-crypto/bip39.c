@@ -38,9 +38,17 @@ const char *mnemonic_generate(int strength, char *buf, int buflen)
 	if (strength % 32 || strength < 128 || strength > 256) {
 		return 0;
 	}
-	uint8_t data[32];
-	random_buffer(data, 32);
-	const char *r = mnemonic_from_data(data, strength / 8, buf, buflen);
+	if (!buf || buflen < BIP39_MAX_WORDS * (BIP39_MAX_WORD_LENGTH + 1)) {
+		return 0;
+	}
+	const int data_len = strength / 8;
+	uint8_t data[32] = {0};
+	if (!random_buffer_checked(data, data_len)) {
+		memzero(data, sizeof(data));
+		memzero(buf, BIP39_MAX_WORDS * (BIP39_MAX_WORD_LENGTH + 1));
+		return 0;
+	}
+	const char *r = mnemonic_from_data(data, data_len, buf, buflen);
 	memzero(data, sizeof(data));
 	return r;
 }
@@ -50,9 +58,17 @@ const uint16_t *mnemonic_generate_indexes(int strength, uint16_t *indexes, int c
 	if (strength % 32 || strength < 128 || strength > 256) {
 		return 0;
 	}
-	uint8_t data[32];
-	random_buffer(data, 32);
-	const uint16_t *r = mnemonic_from_data_indexes(data, strength / 8, indexes, count);
+	if (!indexes || count < BIP39_MAX_WORDS) {
+		return 0;
+	}
+	const int data_len = strength / 8;
+	uint8_t data[32] = {0};
+	if (!random_buffer_checked(data, data_len)) {
+		memzero(data, sizeof(data));
+		memset(indexes, 0xFF, BIP39_MAX_WORDS * sizeof(*indexes));
+		return 0;
+	}
+	const uint16_t *r = mnemonic_from_data_indexes(data, data_len, indexes, count);
 	memzero(data, sizeof(data));
 	return r;
 }

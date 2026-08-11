@@ -33,10 +33,12 @@
 // passphrase input field so users are told up front rather than failing at derivation.
 #define BIP39_MAX_PASSPHRASE_LENGTH 256
 
-// buf/indexes are caller-owned; count is the number of uint16_t entries and must be
-// at least BIP39_MAX_WORDS.
-const char *mnemonic_generate(int strength, char *buf, int buflen);	// strength in bits
-const uint16_t *mnemonic_generate_indexes(int strength, uint16_t *indexes, int count);	// strength in bits
+// buf/indexes are caller-owned. buflen must be at least BIP39_MAX_WORDS *
+// (BIP39_MAX_WORD_LENGTH + 1); count must be at least BIP39_MAX_WORDS. For valid
+// arguments, generation failure leaves buf zeroed or indexes filled with UINT16_MAX.
+// The returned pointer must always be checked.
+const char *mnemonic_generate(int strength, char *buf, int buflen) __attribute__((warn_unused_result));	// strength in bits
+const uint16_t *mnemonic_generate_indexes(int strength, uint16_t *indexes, int count) __attribute__((warn_unused_result));	// strength in bits
 
 const char *mnemonic_from_data(const uint8_t *data, int len, char *buf, int buflen);
 const uint16_t *mnemonic_from_data_indexes(const uint8_t *data, int len, uint16_t *indexes, int count);
