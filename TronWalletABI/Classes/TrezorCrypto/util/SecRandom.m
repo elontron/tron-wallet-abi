@@ -6,7 +6,7 @@
 #include <os/lock.h>
 
 #include "memzero.h"
-#include "rand.h"
+#include "../trezor-crypto/rand.h"
 #include "sha2.h"
 
 enum {
