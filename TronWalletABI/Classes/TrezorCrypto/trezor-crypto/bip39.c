@@ -160,7 +160,7 @@ int mnemonic_to_entropy(const char *mnemonic, uint8_t *entropy)
 	n++;
 
 	// check number of words
-	if (n != 12 && n != 18 && n != 24) {
+	if (n < 12 || n > 24 || n % 3 != 0) {
 		return 0;
 	}
 
@@ -211,21 +211,15 @@ int mnemonic_check(const char *mnemonic)
 {
 	uint8_t bits[32 + 1];
 	int seed_len = mnemonic_to_entropy(mnemonic, bits);
-	if (seed_len != (12 * 11) && seed_len != (18 * 11) && seed_len != (24 * 11)) {
+	if (!seed_len) {
 		return 0;
 	}
 	int words = seed_len / 11;
 
 	uint8_t checksum = bits[words * 4 / 3];
 	sha256_Raw(bits, words * 4 / 3, bits);
-	if (words == 12) {
-		return (bits[0] & 0xF0) == (checksum & 0xF0); // compare first 4 bits
-	} else if (words == 18) {
-		return (bits[0] & 0xFC) == (checksum & 0xFC); // compare first 6 bits
-	} else if (words == 24) {
-		return bits[0] == checksum; // compare 8 bits
-	}
-	return 0;
+	int checksum_bits = words / 3;
+	return (bits[0] >> (8 - checksum_bits)) == (checksum >> (8 - checksum_bits));
 }
 
 int mnemonic_to_seed(const char *mnemonic, const char *passphrase, uint8_t seed[512 / 8], void (*progress_callback)(uint32_t current, uint32_t total))

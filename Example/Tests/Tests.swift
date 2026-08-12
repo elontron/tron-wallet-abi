@@ -18,6 +18,30 @@ class Tests: XCTestCase {
         XCTAssert(true, "Pass")
     }
 
+    func testBIP39Validates15And21WordMnemonics() {
+        for entropyLength in [20, 28] {
+            let entropy = Data(repeating: 0, count: entropyLength)
+            var mnemonic = [CChar](repeating: 0, count: 240)
+            let generated = mnemonic.withUnsafeMutableBufferPointer { mnemonicBuffer in
+                entropy.withUnsafeBytes { entropyBuffer in
+                    guard let baseAddress = entropyBuffer.baseAddress else {
+                        return false
+                    }
+                    mnemonic_from_data(
+                        baseAddress.assumingMemoryBound(to: UInt8.self),
+                        Int32(entropyLength),
+                        mnemonicBuffer.baseAddress,
+                        Int32(mnemonicBuffer.count)
+                    ) != nil
+                }
+            }
+
+            XCTAssertTrue(generated)
+            XCTAssertEqual(String(cString: mnemonic).split(separator: " ").count, entropyLength * 3 / 4)
+            XCTAssertEqual(mnemonic_check(mnemonic), 1)
+        }
+    }
+
     /// secp256k1 group order, the first scalar that is no longer a usable private key.
     private static let curveOrder = Data([
         0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
