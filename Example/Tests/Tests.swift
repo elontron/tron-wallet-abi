@@ -42,6 +42,31 @@ class Tests: XCTestCase {
         }
     }
 
+    func testECDSASignatureDEREncodingKeepsZeroScalars() {
+        let signatures = [
+            [UInt8](repeating: 0, count: 63) + [1],
+            [UInt8](repeating: 0, count: 31) + [1] + [UInt8](repeating: 0, count: 32),
+            [UInt8](repeating: 0, count: 64),
+        ]
+        let expectedDER: [[UInt8]] = [
+            [0x30, 0x06, 0x02, 0x01, 0x00, 0x02, 0x01, 0x01],
+            [0x30, 0x06, 0x02, 0x01, 0x01, 0x02, 0x01, 0x00],
+            [0x30, 0x06, 0x02, 0x01, 0x00, 0x02, 0x01, 0x00],
+        ]
+
+        for (signature, expected) in zip(signatures, expectedDER) {
+            var der = [UInt8](repeating: 0, count: 72)
+            let length = signature.withUnsafeBufferPointer { signatureBuffer in
+                der.withUnsafeMutableBufferPointer { derBuffer in
+                    ecdsa_sig_to_der(signatureBuffer.baseAddress, derBuffer.baseAddress)
+                }
+            }
+
+            XCTAssertEqual(Int(length), expected.count)
+            XCTAssertEqual(Array(der.prefix(Int(length))), expected)
+        }
+    }
+
     /// secp256k1 group order, the first scalar that is no longer a usable private key.
     private static let curveOrder = Data([
         0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
