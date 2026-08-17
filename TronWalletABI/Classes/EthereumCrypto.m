@@ -54,6 +54,33 @@ static BOOL isValidPublicKeyData(NSData *publicKey) {
     return signature;
 }
 
++ (nonnull NSData *)recoverAddressFromHash:(nonnull NSData *)hash signature:(nonnull NSData *)signature {
+    if (hash.length != 32 || signature.length != 65) {
+        return [NSData data];
+    }
+
+    const uint8_t *signatureBytes = signature.bytes;
+    uint8_t recoveryID = signatureBytes[64];
+    if (recoveryID >= 27 && recoveryID <= 30) {
+        recoveryID -= 27;
+    } else if (recoveryID > 3) {
+        return [NSData data];
+    }
+
+    uint8_t publicKey[65] = {0};
+    if (ecdsa_recover_pub_from_sig(&secp256k1, publicKey, signatureBytes, hash.bytes, recoveryID) != 0) {
+        memzero(publicKey, sizeof(publicKey));
+        return [NSData data];
+    }
+
+    uint8_t publicKeyHash[32] = {0};
+    keccak_256(publicKey + 1, 64, publicKeyHash);
+    NSData *address = [NSData dataWithBytes:publicKeyHash + 12 length:20];
+    memzero(publicKey, sizeof(publicKey));
+    memzero(publicKeyHash, sizeof(publicKeyHash));
+    return address;
+}
+
 + (BOOL)verifySignature:(nonnull NSData *)signature message:(nonnull NSData *)message publicKey:(nonnull NSData *)publicKey {
     // ecdsa_verify_digest reads R || S only; a trailing recovery byte is accepted but unused.
     if ((signature.length != 64 && signature.length != 65) || message.length != 32 || !isValidPublicKeyData(publicKey)) {

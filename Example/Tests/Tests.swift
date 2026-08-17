@@ -131,6 +131,27 @@ class Tests: XCTestCase {
         XCTAssertFalse(EthereumCrypto.verify(signature: signature, message: EthereumCrypto.hash(Data("tronn".utf8)), publicKey: publicKey))
     }
 
+    func testEthereumCryptoRecoversAddress() {
+        var privateKey = Data(repeating: 0, count: 32)
+        privateKey[31] = 1
+        let digest = EthereumCrypto.hash(Data("tron".utf8))
+        let signature = EthereumCrypto.sign(hash: digest, privateKey: privateKey)
+        let expected = Data(hexString: "7e5f4552091a69125d5dfcb7b8c2659029395bdf")
+
+        XCTAssertEqual(EthereumCrypto.recoverAddress(hash: digest, signature: signature), expected)
+
+        var legacySignature = signature
+        legacySignature[64] += 27
+        XCTAssertEqual(EthereumCrypto.recoverAddress(hash: digest, signature: legacySignature), expected)
+
+        var invalidRecoveryID = signature
+        invalidRecoveryID[64] = 31
+        XCTAssertTrue(EthereumCrypto.recoverAddress(hash: digest, signature: invalidRecoveryID).isEmpty)
+        XCTAssertTrue(EthereumCrypto.recoverAddress(hash: Data(count: 31), signature: signature).isEmpty)
+        XCTAssertTrue(EthereumCrypto.recoverAddress(hash: digest, signature: Data(count: 64)).isEmpty)
+        XCTAssertTrue(EthereumCrypto.recoverAddress(hash: digest, signature: Data(count: 65)).isEmpty)
+    }
+
     func testEthereumCryptoConcurrentSigningIsStable() {
         var privateKey = Data(repeating: 0, count: 32)
         privateKey[31] = 1

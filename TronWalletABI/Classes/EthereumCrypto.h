@@ -17,6 +17,12 @@
 /// @return signature is in the 65-byte [R || S || V] format where V is 0 or 1; empty data is returned for invalid input or signing failure.
 + (nonnull NSData *)signHash:(nonnull NSData *)hash privateKey:(nonnull NSData *)privateKey NS_SWIFT_NAME(sign(hash:privateKey:));
 
+/// Recovers the 20-byte Ethereum address from a recoverable signature.
+/// Returns empty data unless hash is 32 bytes, signature is 65-byte R || S || V,
+/// and V is in 0...3 or 27...30.
++ (nonnull NSData *)recoverAddressFromHash:(nonnull NSData *)hash
+                                 signature:(nonnull NSData *)signature NS_SWIFT_NAME(recoverAddress(hash:signature:));
+
 /// Verifies a hash signature.
 ///
 /// @param signature 64-byte [R || S] or 65-byte [R || S || V] signature; the recovery byte is ignored
