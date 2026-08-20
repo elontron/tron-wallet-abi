@@ -153,6 +153,50 @@ class Tests: XCTestCase {
         }
     }
     
+    func testAddressEncodingAlwaysWrites32ByteSlot() throws {
+        let evm20 = Data(repeating: 0xaa, count: 20)
+        let expected = Data(repeating: 0, count: 12) + evm20
+
+        let encoder20 = ABIEncoder()
+        try encoder20.encode(Address(data: evm20))
+        XCTAssertEqual(encoder20.data, expected)
+
+        let encoder41 = ABIEncoder()
+        try encoder41.encode(Address(data: Data([0x41]) + evm20))
+        XCTAssertEqual(encoder41.data, expected)
+
+        let encoder00 = ABIEncoder()
+        try encoder00.encode(Address(data: Data([0x00]) + evm20))
+        XCTAssertEqual(encoder00.data, expected)
+
+        let encoder32 = ABIEncoder()
+        try encoder32.encode(Address(data: expected))
+        XCTAssertEqual(encoder32.data, expected)
+        XCTAssertEqual(encoder32.data.count, 32)
+    }
+
+    func testEmptyAddressEncodingThrowsWithoutWritingBytes() {
+        let encoder = ABIEncoder()
+        XCTAssertThrowsError(try encoder.encode(Address(data: Data()))) { error in
+            XCTAssertEqual(error as? ABIError, .invalidAddress)
+        }
+        XCTAssertTrue(encoder.data.isEmpty)
+
+        XCTAssertThrowsError(try encoder.encode(Address(data: Data([0x01])))) { error in
+            XCTAssertEqual(error as? ABIError, .invalidAddress)
+        }
+        XCTAssertTrue(encoder.data.isEmpty)
+    }
+
+    func testTransferFromDoesNotCollapseEmptyToSlot() {
+        let from = Address(data: Data(repeating: 0xaa, count: 20))
+        let encoder = ABIEncoder()
+        let function = Function(name: "transferFrom", parameters: [.address, .address, .uint(bits: 256)])
+        XCTAssertThrowsError(try encoder.encode(function: function, arguments: [from, Address(data: Data()), 12345])) { error in
+            XCTAssertEqual(error as? ABIError, .invalidAddress)
+        }
+    }
+
     func testPerformanceExample() {
         // This is an example of a performance test case.
         self.measure() {
